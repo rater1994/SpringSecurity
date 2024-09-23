@@ -12,8 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
 import java.security.Key;
+import java.util.Base64;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -24,23 +24,22 @@ public class JwtUtils {
     private String jwtSecret;
 
     @Value("${spring.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    private long jwtExpirationMs;
 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtUtils.class);
 
 
-    // Secret key for signing the JWTs (Replace with your own securely stored key)
     private Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
 
     public String getJwtFromHeader(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        LOGGER.debug("Authorization Header: {}", bearerToken);
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        String authorizationHeader = request.getHeader("Authorization");
+        LOGGER.debug("Authorization Header: {}", authorizationHeader);
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7);
         }
         return null;
     }
@@ -51,9 +50,10 @@ public class JwtUtils {
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key())
+                .signWith(key(), SignatureAlgorithm.HS512)
                 .compact();
     }
+
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
@@ -71,6 +71,9 @@ public class JwtUtils {
     public String getUsernameFromJwtToken(String token) {
         return extractClaim(token, Claims::getSubject);
     }
+
+
+
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()

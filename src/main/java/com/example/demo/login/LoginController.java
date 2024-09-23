@@ -48,7 +48,9 @@ public class LoginController {
 
         UserDetails userDetails = (UserDetails) authenTication.getPrincipal();
 
-        String jwtToken = jwtUtils.getUsernameFromJwtToken(String.valueOf(userDetails));
+        String jwtToken = jwtUtils.generateTokenFromUsername(userDetails);
+
+        System.out.println(jwtToken);
 
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority()).toList();
